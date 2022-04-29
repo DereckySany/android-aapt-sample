@@ -128,7 +128,7 @@ ou seja, `Object = findViewById(R.id.id_name)`; Medium `id_name`.
 Esses valores podem ser usados no código `android.R.id` Quote to . Se em `ids.xml` Isso define `ID` , está em `layout` 
 Pode ser definido da seguinte `@id/price_edit` forma , caso contrário `@+id/price_edit`.
 
-## | Avançado
+## Avançado
 
 - É fácil nomear, podemos nomear alguns controles específicos primeiro, referência direta ao usar `id` isso fará, uma etapa de nomenclatura é omitida.
 - Otimize a eficiência da compilação:
@@ -206,7 +206,7 @@ Primeiro em `value` Sob o arquivo, siga o acima `ids.xml` e `public.xml` E o nom
 
 Através da compilação direta do `R file` conteúdo de , você pode ver os recursos que queremos configurar. `id` Não gerou como esperávamos.
 
-||levar `public.xml` a cópia do arquivo para o `build/intermediates/res/merged` diretório correspondente
+> levar `public.xml` a cópia do arquivo para o `build/intermediates/res/merged` diretório correspondente
 
 ```
 afterEvaluate {
@@ -228,3 +228,44 @@ afterEvaluate {
 }
  Copy code 
 ```
+![img](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/9b3b233e01774cde8380db4a626011f9~tplv-k3u1fbpfcp-zoom-1.image)
+
+Desta vez podemos ver os recursos `id` gerados diretamente de acordo com nossas necessidades.
+
+> ### Por que é que ?
+
+- `android gradle` unidade de plug-in `1.3` A versão a seguir pode colocá-lo diretamente `public.xml` no código-fonte `res` O diretório está envolvido na compilação;
+- `android gradle` unidade de plug-in `1.3+` A versão está em execução `mergeResource` A missão foi ignorada `public.xml`, portanto `merge` Após a conclusão `build` No catálogo `res` Não há `public.xml` conteúdo relacionado . Portanto, precisamos compilá-lo por script `public.xml` Inserir em `merge` Após a conclusão `build` No catálogo `res` Sob o índice. É por isso que funciona, porque `aapt` é suporte em si mesmo `public.xml`, é apenas `gradle` o plug-in que está pré-processando recursos `(merge)`quando o `public.xml` faz o filtro.
+
+## aapt2idFixação de Conduta
+ficar `aapt2` compilar - Compilar o arquivo de recursos em formato binário após , Descobrir `merge` Todos os recursos foram pré-compilados , `flat` Arquivo produzido , Desta vez será `public.xml` Se o arquivo for copiado para este diretório, ocorrerá um erro de compilação .
+
+### Mas na fase `aapt2` com `link` , vamos ver as opções de `Link` relevantes.
+```
+Opções	                     explique
+--emit-ids path	            Gere um arquivo no caminho fornecido, Este arquivo contém o nome do tipo de recurso e seu ID Uma lista de mapeamentos. É adequado para --stable-ids usá-lo com .
+--stable-ids                  
+outputfilename.ext	         Use pass --emit-ids Generated files , Este arquivo contém o nome do tipo de recurso e a lista de ID A de . 
+
+                              Esta opção permite que o ID atribuído permaneça estável, mesmo se você excluir um recurso ou adicionar um novo recurso ao vincular.
+```
+Descubra `--emit-idse` a `--stable-ids` colocação de comando pode alcançar a `id` fixação.
+```
+android {
+  aaptOptions {
+        File publicTxtFile = project.rootProject.file('public.txt')
+        //public File exists , The application of , If it doesn't exist, it generates 
+        if (publicTxtFile.exists()) {
+            project.logger.error "${publicTxtFile} exists, apply it."
+            //aapt2 add to --stable-ids Parameter application 
+            aaptOptions.additionalParameters("--stable-ids", "${publicTxtFile}")
+        } else {
+            project.logger.error "${publicTxtFile} not exists, generate it."
+            //aapt2 add to --emit-ids Parameter generation 
+            aaptOptions.additionalParameters("--emit-ids", "${publicTxtFile}")
+        }
+    }
+}
+ Copy code 
+```
+
