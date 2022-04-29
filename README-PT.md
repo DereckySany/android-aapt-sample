@@ -158,7 +158,7 @@ ids.xmlO conteúdo do documento:
  ## resumo public.xml
  Instruções oficiais Site oficial Selecione os recursos que deseja tornar públicos .
  ```
- ---------------------------------------------
+ 
 Tradução original Todos os recursos da biblioteca são públicos por padrão. Para tornar todos os recursos implicitamente privados, você deve definir 
 pelo menos um atributo específico como público. Os recursos incluem... Do seu projeto `res/` Todos os arquivos no diretório, como imagens. Para evitar que os usuários da biblioteca acessem recursos apenas para uso interno, você deve usar esse mecanismo automático de identificação privada declarando um ou 
 mais recursos públicos. talvez, Você também pode adicionar uma `<public/>` Tag vazia torna todos os recursos privados, Esta tag não torna nenhum recurso  público, Vai levar tudo Todos os recursos Todos privados .
@@ -166,5 +166,65 @@ mais recursos públicos. talvez, Você também pode adicionar uma `<public/>` Ta
 Tornando as propriedades implicitamente privadas, você pode não apenas impedir que os usuários da biblioteca obtenham conselhos de conclusão de código dos recursos internos da biblioteca, mas também renomear ou remover recursos privados, sem destruir o lado cliente da biblioteca. O sistema filtra recursos privados do preenchimento de código, além disso, um aviso Lint Um aviso é emitido quando você tenta fazer referência a recursos privados.
 
 Ao construir a biblioteca, Android Gradle O plug-in obtém a definição de recurso público e extrai-o para `public.txt` In file, O sistema então empacota o arquivo em AAR In file .
------------------------------------------------
+
+```
+Os resultados medidos estão apenas incompletos, está vermelho. Se realizado `lint Check` , Não há avisos para compilar
+
+Agora a maior parte da explicação é arquivo `res/value/public.xml` Usado para colocar recursos fixos `ID` Atribuído a `Android` recursos.
+
+`public.xml` O conteúdo do documento:
+```
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <public name="forecast_list" id="0x7f040001" type="id" />
+    <public name="app_name" id="0x7f070002" type="string" />
+    <public name="string3" id="0x7f070003" type="string" />
+</resources>
+ Copy code 
+ ```
+ ## Correção de ID de recursos
+ 
+recursos `id` A fixação de é extremamente importante em reparo a quente e plug-in. Em reparo a quente , estrutura `patch` quando , Precisa manter os recursos do `patch` pacote `id` E recursos do pacote de referência `id` Acordo ; No plug-in , se o plug-in precisar fazer referência aos recursos do host , você precisará transferir os recursos do host `id` Fix , portanto , recursos `id` É especialmente importante ser corrigido nesses dois cenários .
+
+ficar Android Gradle Plugin 3.0.0em , O padrão é `aapt2` ativado , O `aapt` original O modo fixo de recursos `public.xml` Ele também falhará , Temos que encontrar uma nova maneira de corrigir recursos , Em vez de simplesmente desativá-lo `aapt2`, Então este artigo discute `aapt` and `aapt2` Como realizar o gerenciamento de recursos, respectivamente `id` Fixação.
+
+## aapt id Fixação de Conduta:
+
+Configuração do ambiente do projeto `PS` Faça reclamações sobre isso `aapt` Foi `aapt2` Em vez de ,`aapt` Há pouca informação sobre isso, É muito difícil construir o ambiente
+```
+com.android.tools.build:gradle:2.2.0
+
+distributionUrl=https\://services.gradle.org/distributions/gradle-3.4.1-all.zip
+
+compileSdkVersion 24
+
+buildToolsVersion '24.0.0'
+```
+Primeiro em `value` Sob o arquivo, siga o acima `ids.xml` e `public.xml` E o nome do arquivo, Gere o arquivo correspondente.
+
+![img](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/f1de729a9c4b4b9094e3c350f580f3aa~tplv-k3u1fbpfcp-zoom-1.image)
+
+Através da compilação direta do `R file` conteúdo de , você pode ver os recursos que queremos configurar. `id` Não gerou como esperávamos.
+
+||levar `public.xml` a cópia do arquivo para o `build/intermediates/res/merged` diretório correspondente
+
+```
+afterEvaluate {
+    for (variant in android.applicationVariants) {
+        def scope = variant.getVariantData().getScope()
+        String mergeTaskName = scope.getMergeResourcesTask().name
+        def mergeTask = tasks.getByName(mergeTaskName)
+        mergeTask.doLast {
+            copy {
+                int i=0
+                from(android.sourceSets.main.res.srcDirs) {
+                    include 'values/public.xml'
+                    rename 'public.xml', (i++ == 0? "public.xml": "public_${i}.xml")
+                }
+                into(mergeTask.outputDir)
+            }
+        }
+    }
+}
+ Copy code 
 ```
