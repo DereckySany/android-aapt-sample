@@ -156,3 +156,15 @@ ids.xmlO conteúdo do documento:
  porque `app_name` os recursos para já estão `value` declarados em .
  
  ## resumo public.xml
+ Instruções oficiais Site oficial Selecione os recursos que deseja tornar públicos .
+ ```
+ ---------------------------------------------
+Tradução original Todos os recursos da biblioteca são públicos por padrão. Para tornar todos os recursos implicitamente privados, você deve definir 
+pelo menos um atributo específico como público. Os recursos incluem... Do seu projeto `res/` Todos os arquivos no diretório, como imagens. Para evitar que os usuários da biblioteca acessem recursos apenas para uso interno, você deve usar esse mecanismo automático de identificação privada declarando um ou 
+mais recursos públicos. talvez, Você também pode adicionar uma `<public/>` Tag vazia torna todos os recursos privados, Esta tag não torna nenhum recurso  público, Vai levar tudo Todos os recursos Todos privados .
+
+Tornando as propriedades implicitamente privadas, você pode não apenas impedir que os usuários da biblioteca obtenham conselhos de conclusão de código dos recursos internos da biblioteca, mas também renomear ou remover recursos privados, sem destruir o lado cliente da biblioteca. O sistema filtra recursos privados do preenchimento de código, além disso, um aviso Lint Um aviso é emitido quando você tenta fazer referência a recursos privados.
+
+Ao construir a biblioteca, Android Gradle O plug-in obtém a definição de recurso público e extrai-o para `public.txt` In file, O sistema então empacota o arquivo em AAR In file .
+-----------------------------------------------
+```
